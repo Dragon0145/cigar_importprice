@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>計算結果 - 葉巻 輸入税 概算</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; line-height: 1.6; }
+    .box { max-width: 720px; margin: 0 auto; padding: 18px; border: 1px solid #ddd; border-radius: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
+    .total { font-size: 20px; font-weight: 800; }
+    a { display:inline-block; margin-top: 14px; }
+    .note { color:#444; font-size: 14px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>計算結果（概算）</h1>
+
+    <h2>入力</h2>
+    <table>
+      <tr><th>本数</th><td>{{ sticks }}</td></tr>
+      <tr><th>1本重量(g)</th><td>{{ weight_g }}</td></tr>
+      <tr><th>通貨</th><td>{{ currency }}</td></tr>
+      <tr><th>為替（円/外貨1）</th><td>{{ fx_rate }}</td></tr>
+      <tr><th>為替ソース</th><td>{{ fx_source }}</td></tr>
+      <tr><th>商品価格（外貨）</th><td>{{ item_price_foreign }}</td></tr>
+      <tr><th>送料（外貨）</th><td>{{ shipping_foreign }}</td></tr>
+      <tr><th>商品価格（円換算）</th><td>{{ item_price }} 円</td></tr>
+      <tr><th>送料（円換算）</th><td>{{ shipping }} 円</td></tr>
+      <tr><th>関税率</th><td>{{ duty_rate }}</td></tr>
+    </table>
+
+    <h2>内訳</h2>
+    <table>
+      <tr><th>CIF（商品＋送料）</th><td>{{ b.cif_yen }} 円</td></tr>
+      <tr><th>関税</th><td>{{ b.duty_yen }} 円</td></tr>
+      <tr>
+        <th>たばこ税等<br>（紙巻換算 {{ "%.2f"|format(b.equiv_cigarettes) }} 本相当）</th>
+        <td>{{ b.tobacco_tax_yen }} 円</td>
+      </tr>
+      <tr><th>輸入消費税</th><td>{{ b.import_vat_yen }} 円</td></tr>
+      <tr><th class="total">合計</th><td class="total">{{ b.total_yen }} 円</td></tr>
+    </table>
+
+    <p class="note">
+      ※ 為替レートは参考値です（自動取得は無料APIの参照レート）。<br>
+      実際の決済レートや税関評価レートと一致しない場合があります。<br>
+      税率データ更新日：{{ rates.updated_at }}
+    </p>
+
+    <a href="/">← 戻る</a>
+  </div>
+</body>
+</html>

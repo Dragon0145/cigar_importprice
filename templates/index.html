@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>葉巻 輸入税 概算計算</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; line-height: 1.6; }
+    .box { max-width: 720px; margin: 0 auto; padding: 18px; border: 1px solid #ddd; border-radius: 12px; }
+    label { display:block; margin-top: 12px; font-weight: 600; }
+    input, select { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ccc; border-radius: 10px; font-size: 16px; }
+    button { margin-top: 18px; padding: 12px 14px; border: 0; border-radius: 12px; font-size: 16px; cursor: pointer; width: 100%; }
+    .note { color: #444; font-size: 14px; margin-top: 12px; }
+    .errors { background: #ffecec; border: 1px solid #ffb8b8; padding: 10px; border-radius: 10px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>葉巻 輸入税（概算）</h1>
+
+    {% if errors %}
+      <div class="errors">
+        <ul>
+          {% for e in errors %}
+            <li>{{ e }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <form action="/calc" method="post">
+
+      <label>本数</label>
+      <input name="sticks" type="number" min="1" step="1" placeholder="例: 10" required>
+
+      <label>1本あたり重量 (g)</label>
+      <input name="weight_g" type="number" min="0.01" step="0.01" placeholder="例: 2.5" required>
+
+      <label>通貨</label>
+      <select name="currency" required>
+        <option value="USD" selected>USD（米ドル）</option>
+        <option value="EUR">EUR（ユーロ）</option>
+        <option value="GBP">GBP（英ポンド）</option>
+        <option value="AUD">AUD（豪ドル）</option>
+        <option value="CAD">CAD（カナダドル）</option>
+        <option value="CHF">CHF（スイスフラン）</option>
+        <option value="CNY">CNY（中国人民元）</option>
+        <option value="HKD">HKD（香港ドル）</option>
+      </select>
+
+      <label>為替レート（円 / 外貨1）※手入力用</label>
+      <input name="fx_rate_manual" type="number" min="0.0001" step="0.0001" placeholder="例: 150.25">
+
+      <label>商品価格（外貨）</label>
+      <input name="item_price_foreign" type="number" min="0" step="0.01" placeholder="例: 80.00" required>
+
+      <label>送料（外貨）</label>
+      <input name="shipping_foreign" type="number" min="0" step="0.01" placeholder="例: 15.00" required>
+
+      <label>為替の取得方法</label>
+      <select name="fx_mode">
+        <option value="auto" selected>自動（無料API）</option>
+        <option value="manual">手入力</option>
+      </select>
+
+      <label>関税率（概算）</label>
+      <input name="duty_rate" type="number" min="0" max="1" step="0.001"
+             value="{{ rates.default_duty_rate }}" placeholder="例: 0.16">
+
+      <button type="submit" name="action" value="calc_normal">計算する</button>
+      <button type="submit" name="action" value="calc_usd_jpy" style="margin-top:10px;">
+        USD→JPYで計算（自動）
+      </button>
+    </form>
+
+    <p class="note">
+      ※ 為替レートは参考値です（自動取得は無料APIの参照レート）。<br>
+      実際の決済レートや税関評価レートと一致しない場合があります。<br>
+      税率データ更新日：{{ rates.updated_at }}
+    </p>
+  </div>
+</body>
+</html>
