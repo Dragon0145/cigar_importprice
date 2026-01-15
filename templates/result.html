@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>計算結果 - 葉巻 輸入税 概算</title>
+  <title>計算結果｜葉巻 輸入 金額計算</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; line-height: 1.6; }
     .box { max-width: 720px; margin: 0 auto; padding: 18px; border: 1px solid #ddd; border-radius: 12px; }
@@ -22,9 +22,9 @@
     <table>
       <tr><th>本数</th><td>{{ sticks }}</td></tr>
       <tr><th>1本重量(g)</th><td>{{ weight_g }}</td></tr>
-      <tr><th>通貨</th><td>{{ currency }}</td></tr>
+      <tr><th>支払い通貨</th><td>{{ currency }}</td></tr>
       <tr><th>為替（円/外貨1）</th><td>{{ fx_rate }}</td></tr>
-      <tr><th>為替ソース</th><td>{{ fx_source }}</td></tr>
+      <tr><th>為替取得</th><td>{{ fx_source }}</td></tr>
       <tr><th>商品価格（外貨）</th><td>{{ item_price_foreign }}</td></tr>
       <tr><th>送料（外貨）</th><td>{{ shipping_foreign }}</td></tr>
       <tr><th>商品価格（円換算）</th><td>{{ item_price }} 円</td></tr>
@@ -45,7 +45,7 @@
     </table>
 
     <p class="note">
-      ※ 為替レートは参考値です（自動取得は無料APIの参照レート）。<br>
+      ※ 為替レートは参考値です（無料APIによる最新レート、または手入力）。<br>
       実際の決済レートや税関評価レートと一致しない場合があります。<br>
       税率データ更新日：{{ rates.updated_at }}
     </p>

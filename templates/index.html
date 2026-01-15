@@ -4,8 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>葉巻 輸入 金額計算｜関税・たばこ税・消費税を簡単計算</title>
-<meta name="description" content="葉巻を個人輸入した際にかかる関税・たばこ税・消費税を簡単に概算計算できる無料サイトです。外貨から円換算にも対応しています。">
-<meta name="google-site-verification" content="OztgYU4oATUl7mVUSLgQRvLrmTx7GLOYyliLh8EywjU" />
+  <meta name="description" content="葉巻を個人輸入した際にかかる関税・たばこ税・消費税を簡単に概算計算できる無料サイトです。外貨から円換算にも対応しています。">
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; line-height: 1.6; }
     .box { max-width: 720px; margin: 0 auto; padding: 18px; border: 1px solid #ddd; border-radius: 12px; }
@@ -14,6 +13,9 @@
     button { margin-top: 18px; padding: 12px 14px; border: 0; border-radius: 12px; font-size: 16px; cursor: pointer; width: 100%; }
     .note { color: #444; font-size: 14px; margin-top: 12px; }
     .errors { background: #ffecec; border: 1px solid #ffb8b8; padding: 10px; border-radius: 10px; margin-bottom: 12px; }
+    details { margin-top: 14px; }
+    summary { cursor: pointer; font-weight: 700; }
+    .small { font-size: 13px; color: #555; }
   </style>
 </head>
 <body>
@@ -38,7 +40,7 @@
       <label>1本あたり重量 (g)</label>
       <input name="weight_g" type="number" min="0.01" step="0.01" placeholder="例: 2.5" required>
 
-      <label>通貨</label>
+      <label>支払い通貨</label>
       <select name="currency" required>
         <option value="USD" selected>USD（米ドル）</option>
         <option value="EUR">EUR（ユーロ）</option>
@@ -48,10 +50,8 @@
         <option value="CHF">CHF（スイスフラン）</option>
         <option value="CNY">CNY（中国人民元）</option>
         <option value="HKD">HKD（香港ドル）</option>
+        <option value="JPY">JPY（日本円）</option>
       </select>
-
-      <label>為替レート（円 / 外貨1）※手入力用</label>
-      <input name="fx_rate_manual" type="number" min="0.0001" step="0.0001" placeholder="例: 150.25">
 
       <label>商品価格（外貨）</label>
       <input name="item_price_foreign" type="number" min="0" step="0.01" placeholder="例: 80.00" required>
@@ -59,24 +59,23 @@
       <label>送料（外貨）</label>
       <input name="shipping_foreign" type="number" min="0" step="0.01" placeholder="例: 15.00" required>
 
-      <label>為替の取得方法</label>
-      <select name="fx_mode">
-        <option value="auto" selected>自動（無料API）</option>
-        <option value="manual">手入力</option>
-      </select>
-
       <label>関税率（概算）</label>
       <input name="duty_rate" type="number" min="0" max="1" step="0.001"
              value="{{ rates.default_duty_rate }}" placeholder="例: 0.16">
 
-      <button type="submit" name="action" value="calc_normal">計算する</button>
-      <button type="submit" name="action" value="calc_usd_jpy" style="margin-top:10px;">
-        USD→JPYで計算（自動）
-      </button>
+      <!-- デフォルトは自動。APIが落ちた時だけ使う保険 -->
+      <details>
+        <summary>詳細設定（為替が取得できない場合の手入力）</summary>
+        <p class="small">通常は不要です。為替自動取得が失敗する場合のみ入力してください。</p>
+        <label>為替レート（円 / 外貨1）</label>
+        <input name="fx_rate_manual" type="number" min="0.0001" step="0.0001" placeholder="例: 150.25">
+      </details>
+
+      <button type="submit">計算する（為替は自動取得）</button>
     </form>
 
     <p class="note">
-      ※ 為替レートは参考値です（自動取得は無料APIの参照レート）。<br>
+      ※ 為替レートは参考値です（無料APIによる最新レート、または手入力）。<br>
       実際の決済レートや税関評価レートと一致しない場合があります。<br>
       税率データ更新日：{{ rates.updated_at }}
     </p>
