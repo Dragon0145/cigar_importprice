@@ -76,12 +76,21 @@
         <th>免税判定</th>
         <td>
           {% if b.duty_vat_exempted %}
-            <span class="pill">免税（1万円以下）</span>
-          {% else %}
-            <span class="pill">課税対象</span>
-          {% endif %}
+  <span class="exempt">免税（課税価格 10,000円以下）</span>
+{% else %}
+  <span class="taxed">課税（課税価格 10,000円超）</span>
+{% endif %}
         </td>
       </tr>
+.exempt {
+  color: #0066cc;
+  font-weight: bold;
+}
+.taxed {
+  color: #cc0000;
+  font-weight: bold;
+}
+
     </table>
 
     <h2>税金・手数料の内訳</h2>

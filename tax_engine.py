@@ -63,7 +63,7 @@ def calculate(
     purchase_total_yen = int(item_price_yen + shipping_yen)
 
     # 課税価格（関税・消費税の判定用）
-    assessed_value_yen = yen_round(item_price_yen * assessed_ratio)
+assessed_value_yen = yen_round((item_price_yen + shipping_yen) * assessed_ratio)
     duty_vat_exempted = assessed_value_yen <= duty_vat_exempt_threshold_yen
 
     # 関税
@@ -82,9 +82,9 @@ def calculate(
         vat_national_yen = 0
         vat_local_yen = 0
     else:
-        vat_base = assessed_value_yen + duty_yen
-        vat_national_yen = yen_round(vat_base * vat_national_rate)
-        vat_local_yen = yen_round(vat_base * vat_local_rate)
+        vat_base = assessed_value_yen
+vat_national_yen = yen_round(vat_base * vat_national_rate)
+vat_local_yen = yen_round(vat_base * vat_local_rate)
 
     # 税金+手数料 合計
     taxes_and_fees_total_yen = (
