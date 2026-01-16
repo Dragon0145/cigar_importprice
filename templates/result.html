@@ -6,10 +6,11 @@
   <title>計算結果｜葉巻 輸入 金額計算</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; line-height: 1.6; }
-    .box { max-width: 720px; margin: 0 auto; padding: 18px; border: 1px solid #ddd; border-radius: 12px; }
+    .box { max-width: 760px; margin: 0 auto; padding: 18px; border: 1px solid #ddd; border-radius: 12px; }
     table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; vertical-align: top; }
     .total { font-size: 20px; font-weight: 800; }
+    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; background: #f2f2f2; font-size: 12px; }
     a { display:inline-block; margin-top: 14px; }
     .note { color:#444; font-size: 14px; margin-top: 12px; }
   </style>
@@ -18,7 +19,7 @@
   <div class="box">
     <h1>計算結果（概算）</h1>
 
-    <h2>入力</h2>
+    <h2>入力（要点）</h2>
     <table>
       <tr><th>本数</th><td>{{ sticks }}</td></tr>
       <tr><th>1本重量(g)</th><td>{{ weight_g }}</td></tr>
@@ -27,22 +28,46 @@
       <tr><th>為替取得</th><td>{{ fx_source }}</td></tr>
       <tr><th>商品価格（外貨）</th><td>{{ item_price_foreign }}</td></tr>
       <tr><th>送料（外貨）</th><td>{{ shipping_foreign }}</td></tr>
-      <tr><th>商品価格（円換算）</th><td>{{ item_price }} 円</td></tr>
-      <tr><th>送料（円換算）</th><td>{{ shipping }} 円</td></tr>
-      <tr><th>関税率</th><td>{{ duty_rate }}</td></tr>
+      <tr><th>商品価格（円換算）</th><td>{{ b.item_price_yen }} 円</td></tr>
+      <tr><th>送料（円換算）</th><td>{{ b.shipping_yen }} 円</td></tr>
+      <tr><th>購入金額（商品＋送料）</th><td><b>{{ b.purchase_total_yen }}</b> 円</td></tr>
+    </table>
+
+    <h2>課税の前提（個人輸入の概算）</h2>
+    <table>
+      <tr><th>課税価格（商品価格×0.6）</th><td>{{ b.assessed_value_yen }} 円</td></tr>
+      <tr>
+        <th>関税・輸入消費税の免税判定</th>
+        <td>
+          {% if b.duty_vat_exempted %}
+            <span class="pill">免税（課税価格 1万円以下）</span>
+          {% else %}
+            <span class="pill">課税（課税価格 1万円超）</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr><th>関税率（入力値）</th><td>{{ duty_rate }}</td></tr>
     </table>
 
     <h2>内訳</h2>
     <table>
-      <tr><th>CIF（商品＋送料）</th><td>{{ b.cif_yen }} 円</td></tr>
+      <tr><th>購入金額（商品＋送料）</th><td>{{ b.purchase_total_yen }} 円</td></tr>
       <tr><th>関税</th><td>{{ b.duty_yen }} 円</td></tr>
-      <tr>
-        <th>たばこ税等<br>（紙巻換算 {{ "%.2f"|format(b.equiv_cigarettes) }} 本相当）</th>
-        <td>{{ b.tobacco_tax_yen }} 円</td>
-      </tr>
-      <tr><th>輸入消費税</th><td>{{ b.import_vat_yen }} 円</td></tr>
-      <tr><th class="total">合計</th><td class="total">{{ b.total_yen }} 円</td></tr>
-    </table>
+     <tr>
+  <th>たばこ税（重量課税）</th>
+  <td>
+    {{ b.tobacco_tax_yen }} 円<br>
+    <small>
+      総重量 {{ "%.1f"|format(b.total_weight_g) }} g × 15,244円 / kg
+    </small>
+  </td>
+</tr>
+      <tr><th>消費税（国税 7.8%）</th><td>{{ b.vat_national_yen }} 円</td></tr>
+      <tr><th>地方消費税（2.2%）</th><td>{{ b.vat_local_yen }} 円</td></tr>
+      <tr><th>通関料</th><td>{{ b.customs_fee_yen }} 円</td></tr>
+      <tr><th>税金・通関料 合計</th><td>{{ b.taxes_and_fees_total_yen }} 円</td></tr>
+<tr><th class="total">支払総額（商品＋送料＋税金＋通関料）</th><td class="total">{{ b.grand_total_yen }} 円</td></tr>
+<tr><th>1本あたり（支払総額 ÷ 本数）</th><td><b>{{ b.per_stick_yen }}</b> 円/本</td></tr>
 
     <p class="note">
       ※ 為替レートは参考値です（無料APIによる最新レート、または手入力）。<br>
