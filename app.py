@@ -4,10 +4,12 @@ from pathlib import Path
 from flask import Flask, render_template, request
 
 from tax_engine import calculate, fx_to_yen
+
 try:
     from fx_service import get_fx_rate
 except Exception:
     get_fx_rate = None
+
 
 APP_DIR = Path(__file__).parent
 RATES_PATH = APP_DIR / "rates.json"
@@ -19,16 +21,16 @@ def load_rates() -> dict:
     return json.loads(RATES_PATH.read_text(encoding="utf-8"))
 
 
+def _parse_int(name: str) -> int:
+    v = request.form.get(name, "").strip()
+    return int(v)
+
+
 def _parse_float(name: str, default=None):
     v = request.form.get(name, "").strip()
     if v == "":
         return default
     return float(v)
-
-
-def _parse_int(name: str):
-    v = request.form.get(name, "").strip()
-    return int(v)
 
 
 @app.get("/")
@@ -42,7 +44,7 @@ def calc():
     rates = load_rates()
     errors = []
 
-    # 入力値
+    # ---------- 入力取得 ----------
     try:
         sticks = _parse_int("sticks")
         weight_g = float(request.form.get("weight_g", "0"))
@@ -51,12 +53,17 @@ def calc():
         item_price_foreign = float(request.form.get("item_price_foreign", "0"))
         shipping_foreign = float(request.form.get("shipping_foreign", "0"))
 
-        duty_rate = float(request.form.get("duty_rate", rates.get("default_duty_rate", 0.16)))
+        duty_rate = float(
+            request.form.get(
+                "duty_rate",
+                rates.get("default_duty_rate", 0.16)
+            )
+        )
     except Exception:
         errors.append("入力値の形式が正しくありません。数字を確認してください。")
         return render_template("index.html", rates=rates, errors=errors), 400
 
-    # 入力チェック
+    # ---------- 入力チェック ----------
     if sticks <= 0:
         errors.append("本数は1以上で入力してください。")
     if weight_g <= 0:
@@ -69,47 +76,46 @@ def calc():
     if errors:
         return render_template("index.html", rates=rates, errors=errors), 400
 
-    # 為替：基本は自動取得。失敗したら手入力があればそれを使う。
-    fx_source = "auto"
+    # ---------- 為替取得 ----------
     fx_rate = None
+    fx_source = "auto"
 
-    # JPYの場合はレート1固定
     if currency == "JPY":
         fx_rate = 1.0
         fx_source = "fixed"
     else:
         if get_fx_rate is not None:
-            fx_rate, source = get_fx_rate(currency, "JPY")
-            fx_source = source
+            fx_rate, fx_source = get_fx_rate(currency, "JPY")
 
         if fx_rate is None:
             fx_rate_manual = _parse_float("fx_rate_manual", default=None)
             if fx_rate_manual is None:
                 errors.append(
-                    "為替レートの自動取得に失敗しました。少し時間をおいて再実行するか、詳細設定で為替レートを手入力してください。"
+                    "為替レートの自動取得に失敗しました。"
+                    "時間をおいて再実行するか、詳細設定で為替レートを手入力してください。"
                 )
                 return render_template("index.html", rates=rates, errors=errors), 503
             fx_rate = fx_rate_manual
             fx_source = "manual"
 
-    # 円換算
+    # ---------- 円換算 ----------
     item_price_yen = fx_to_yen(item_price_foreign, fx_rate)
     shipping_yen = fx_to_yen(shipping_foreign, fx_rate)
 
-    # 税計算
-    vat_rate = float(rates.get("vat_rate", 0.10))
-    tobacco_tax_per_1000_equiv = int(rates.get("tobacco_tax_per_1000_equiv", 15244))
-
+    # ---------- 税計算 ----------
     b = calculate(
-        sticks=sticks,
-        weight_g_per_stick=weight_g,
-        item_price_yen=item_price_yen,
-        shipping_yen=shipping_yen,
-        duty_rate=duty_rate,
-        vat_rate=vat_rate,
-        tobacco_tax_per_1000_equiv=tobacco_tax_per_1000_equiv,
-    )
+    sticks=sticks,
+    weight_g_per_stick=weight_g,
+    item_price_yen=item_price_yen,
+    shipping_yen=shipping_yen,
+    duty_rate=duty_rate,
+    vat_national_rate=0.078,
+    vat_local_rate=0.022,
+    tobacco_tax_per_kg=15244,   # ★ 1kgあたり
+    customs_fee_yen=200,
+)
 
+    # ---------- 結果表示 ----------
     return render_template(
         "result.html",
         rates=rates,
@@ -120,8 +126,6 @@ def calc():
         fx_source=fx_source,
         item_price_foreign=item_price_foreign,
         shipping_foreign=shipping_foreign,
-        item_price=item_price_yen,
-        shipping=shipping_yen,
         duty_rate=duty_rate,
         b=b,
     )
