@@ -1,124 +1,96 @@
-import json
-from pathlib import Path
-
 from flask import Flask, render_template, request
-
 from tax_engine import calculate, fx_to_yen
-
-try:
-    from fx_service import get_fx_rate
-except Exception:
-    get_fx_rate = None
-
-
-APP_DIR = Path(__file__).parent
-RATES_PATH = APP_DIR / "rates.json"
+from fx_service import get_fx_rate
+import json
+import os
 
 app = Flask(__name__)
 
+# 税率などの設定読み込み
+RATES_FILE = "rates.json"
 
-def load_rates() -> dict:
-    return json.loads(RATES_PATH.read_text(encoding="utf-8"))
+def load_rates():
+    if not os.path.exists(RATES_FILE):
+        return {
+            "default_duty_rate": 0.16,
+            "updated_at": "N/A"
+        }
+    with open(RATES_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
+rates = load_rates()
 
-def _parse_int(name: str) -> int:
-    v = request.form.get(name, "").strip()
-    return int(v)
-
-
-def _parse_float(name: str, default=None):
-    v = request.form.get(name, "").strip()
-    if v == "":
-        return default
-    return float(v)
-
-
-@app.get("/")
+@app.route("/", methods=["GET"])
 def index():
-    rates = load_rates()
-    return render_template("index.html", rates=rates, errors=[])
+    return render_template(
+        "index.html",
+        rates=rates
+    )
 
-
-@app.post("/calc")
+@app.route("/calc", methods=["POST"])
 def calc():
-    rates = load_rates()
     errors = []
 
-    # ---------- 入力取得 ----------
     try:
-        sticks = _parse_int("sticks")
-        weight_g = float(request.form.get("weight_g", "0"))
-        currency = (request.form.get("currency", "USD") or "USD").upper().strip()
+        sticks = int(request.form.get("sticks", 0))
+        weight_g = float(request.form.get("weight_g", 0))
+        currency = request.form.get("currency")
+        fx_mode = request.form.get("fx_mode")
 
-        item_price_foreign = float(request.form.get("item_price_foreign", "0"))
-        shipping_foreign = float(request.form.get("shipping_foreign", "0"))
+        item_price_foreign = float(request.form.get("item_price_foreign", 0))
+        shipping_foreign = float(request.form.get("shipping_foreign", 0))
 
-        duty_rate = float(
-            request.form.get(
-                "duty_rate",
-                rates.get("default_duty_rate", 0.16)
-            )
-        )
-    except Exception:
-        errors.append("入力値の形式が正しくありません。数字を確認してください。")
-        return render_template("index.html", rates=rates, errors=errors), 400
+        duty_rate = float(request.form.get("duty_rate", rates["default_duty_rate"]))
 
-    # ---------- 入力チェック ----------
-    if sticks <= 0:
-        errors.append("本数は1以上で入力してください。")
-    if weight_g <= 0:
-        errors.append("重量(g)は0より大きい値で入力してください。")
-    if item_price_foreign < 0 or shipping_foreign < 0:
-        errors.append("商品価格・送料は0以上で入力してください。")
-    if not (0 <= duty_rate <= 1):
-        errors.append("関税率は 0〜1 の範囲で入力してください（例: 0.16）。")
+        fx_rate_manual = request.form.get("fx_rate_manual", "").strip()
+
+        if sticks <= 0:
+            errors.append("本数は1以上を入力してください。")
+        if weight_g <= 0:
+            errors.append("重量は正の値を入力してください。")
+
+        # 為替レート決定
+        if fx_mode == "auto":
+            fx_rate = get_fx_rate(currency, "JPY")
+            fx_source = "自動（Frankfurter）"
+        else:
+            if not fx_rate_manual:
+                errors.append("為替レートを入力してください。")
+            fx_rate = float(fx_rate_manual)
+            fx_source = "手入力"
+
+        if fx_rate <= 0:
+            errors.append("為替レートが不正です。")
+
+    except Exception as e:
+        errors.append("入力値の形式が正しくありません。")
 
     if errors:
-        return render_template("index.html", rates=rates, errors=errors), 400
+        return render_template(
+            "index.html",
+            errors=errors,
+            rates=rates
+        )
 
-    # ---------- 為替取得 ----------
-    fx_rate = None
-    fx_source = "auto"
-
-    if currency == "JPY":
-        fx_rate = 1.0
-        fx_source = "fixed"
-    else:
-        if get_fx_rate is not None:
-            fx_rate, fx_source = get_fx_rate(currency, "JPY")
-
-        if fx_rate is None:
-            fx_rate_manual = _parse_float("fx_rate_manual", default=None)
-            if fx_rate_manual is None:
-                errors.append(
-                    "為替レートの自動取得に失敗しました。"
-                    "時間をおいて再実行するか、詳細設定で為替レートを手入力してください。"
-                )
-                return render_template("index.html", rates=rates, errors=errors), 503
-            fx_rate = fx_rate_manual
-            fx_source = "manual"
-
-    # ---------- 円換算 ----------
+    # 円換算
     item_price_yen = fx_to_yen(item_price_foreign, fx_rate)
     shipping_yen = fx_to_yen(shipping_foreign, fx_rate)
 
-    # ---------- 税計算 ----------
+    # 税計算
     b = calculate(
-    sticks=sticks,
-    weight_g_per_stick=weight_g,
-    item_price_yen=item_price_yen,
-    shipping_yen=shipping_yen,
-    duty_rate=duty_rate,
-    vat_national_rate=0.078,
-    vat_local_rate=0.022,
-    tobacco_tax_per_kg=15244,   # ★ 1kgあたり
-    customs_fee_yen=200,
-)
+        sticks=sticks,
+        weight_g_per_stick=weight_g,
+        item_price_yen=item_price_yen,
+        shipping_yen=shipping_yen,
+        duty_rate=duty_rate,
+        tobacco_tax_per_kg=15244,   # 法定：1kgあたり
+        vat_national_rate=0.078,
+        vat_local_rate=0.022,
+        customs_fee_yen=200,
+    )
 
-    # ---------- 結果表示 ----------
     return render_template(
         "result.html",
-        rates=rates,
         sticks=sticks,
         weight_g=weight_g,
         currency=currency,
@@ -128,9 +100,8 @@ def calc():
         shipping_foreign=shipping_foreign,
         duty_rate=duty_rate,
         b=b,
+        rates=rates
     )
 
-
 if __name__ == "__main__":
-    # ローカル開発用
     app.run(debug=True)
