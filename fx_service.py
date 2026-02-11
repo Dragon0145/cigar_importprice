@@ -1,57 +1,57 @@
 import json
-from pathlib import Path
+import os
 from datetime import date
 import requests
 
-CACHE_PATH = Path(__file__).parent / "fx_cache.json"
+CACHE_FILE = "fx_cache.json"
+API_URL = "https://api.frankfurter.dev/v1/latest"
 
+def _today_str() -> str:
+    return date.today().isoformat()
 
 def _load_cache() -> dict:
-    if CACHE_PATH.exists():
-        try:
-            return json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
-
+    if not os.path.exists(CACHE_FILE):
+        return {}
+    try:
+        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 def _save_cache(data: dict) -> None:
-    CACHE_PATH.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-
-def get_fx_rate(from_ccy: str, to_ccy: str):
+def get_fx_info(from_ccy: str, to_ccy: str = "JPY") -> dict:
     """
-    Frankfurter API（無料・APIキー不要）
-    戻り値: (rate or None, source_string)
+    戻り値: {"rate": float, "date": "YYYY-MM-DD", "source": "frankfurter"}
+    当日キャッシュがあればそれを返し、なければ取得して保存する。
     """
-    from_ccy = from_ccy.upper().strip()
-    to_ccy = to_ccy.upper().strip()
-    today = date.today().isoformat()
-    key = f"{from_ccy}->{to_ccy}"
+    from_ccy = from_ccy.upper()
+    to_ccy = to_ccy.upper()
+    key = f"{from_ccy}_{to_ccy}"
+    today = _today_str()
 
     cache = _load_cache()
-    if cache.get("date") == today and key in cache.get("rates", {}):
-        return float(cache["rates"][key]), "cache"
+    if key in cache and cache[key].get("date") == today:
+        return {
+            "rate": float(cache[key]["rate"]),
+            "date": cache[key]["date"],
+            "source": cache[key].get("source", "frankfurter"),
+        }
 
-    url = "https://api.frankfurter.app/latest"
-    try:
-        r = requests.get(
-            url,
-            params={"from": from_ccy, "to": to_ccy},
-            timeout=6
-        )
-        r.raise_for_status()
-        data = r.json()
-        rate = data["rates"][to_ccy]
-    except Exception:
-        return None, "unavailable"
+    params = {"base": from_ccy, "symbols": to_ccy}
+    r = requests.get(API_URL, params=params, timeout=10)
+    r.raise_for_status()
+    payload = r.json()
 
-    cache.setdefault("rates", {})
-    cache["date"] = today
-    cache["rates"][key] = rate
+    rate = float(payload["rates"][to_ccy])
+    fx_date = payload.get("date", today)
+
+    cache[key] = {"date": fx_date, "rate": rate, "source": "frankfurter"}
     _save_cache(cache)
 
-    return float(rate), "frankfurter"
+    return {"rate": rate, "date": fx_date, "source": "frankfurter"}
+
+def get_fx_rate(from_ccy: str, to_ccy: str = "JPY") -> float:
+    return float(get_fx_info(from_ccy, to_ccy)["rate"])

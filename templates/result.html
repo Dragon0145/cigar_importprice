@@ -68,7 +68,16 @@
       <tr><th>本数</th><td>{{ sticks }}</td></tr>
       <tr><th>1本あたり重量</th><td>{{ weight_g }} g</td></tr>
       <tr><th>通貨</th><td>{{ currency }}</td></tr>
-      <tr><th>為替レート</th><td>{{ fx_rate }}</td></tr>
+      <tr>
+  <th>為替レート</th>
+  <td>
+    {{ fx_rate }}
+    {% if fx_date %}
+      <br><small>※ 為替データ取得日：{{ fx_date }}</small>
+    {% endif %}
+  </td>
+</tr>
+
       <tr><th>為替取得方法</th><td>{{ fx_source }}</td></tr>
       <tr><th>商品価格（外貨）</th><td>{{ item_price_foreign }}</td></tr>
       <tr><th>送料（外貨）</th><td>{{ shipping_foreign }}</td></tr>
@@ -126,7 +135,6 @@
     <p class="note">
       ※ 本結果は個人輸入時の概算です。<br>
       ※ 消費税は「課税価格（商品価格×0.6）＋関税」を基準に計算しています。<br>
-      税率データ更新日：{{ rates.updated_at }}
     </p>
 
     <a href="/">← 入力画面に戻る</a>
